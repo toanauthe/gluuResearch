@@ -1,0 +1,1 @@
+{"Token":"","Service":{"ID":"vault:172.25.0.3:8200","Service":"vault","Tags":["active"],"Address":"172.25.0.3","Meta":null,"Port":8200,"Weights":{"Passing":1,"Warning":1},"EnableTagOverride":false,"Proxy":{"MeshGateway":{},"Expose":{}},"Connect":{},"CreateIndex":0,"ModifyIndex":0},"Source":"remote"}
