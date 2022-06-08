@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
+use Faker;
 
 class TestCommand extends Command
 {
@@ -41,7 +42,7 @@ class TestCommand extends Command
      */
 
 
-    public function authenticate($username, $password, $grantType)
+    public function authenticate($username, $password, $grantType,$scope = null)
     {
         $this->info("Authenticate User");
         $response = Http::withoutVerifying()
@@ -53,7 +54,8 @@ class TestCommand extends Command
                 [
                     "grant_type" => $grantType,
                     "username" => $username,
-                    "password" => $password
+                    "password" => $password,
+                    "scope"   => $scope
                 ]
             );
         if ($response->status() == 200) {
@@ -81,12 +83,14 @@ class TestCommand extends Command
         return false;
     }
 
-    public function register($username, $password)
+    public function register($username, $email,$password)
     {
         $this->info("Register User");
+        $registerToken = $this->authenticate(null,null,'client_credentials',"https://gluu.org/scim/users.write");
+
         $userSample = [
             "schemas"=> [
-                "string"
+                "urn:ietf:params:scim:schemas:core:2.0:User"
             ],
             "userName" => $username,
             "displayName" => $username,
@@ -102,37 +106,43 @@ class TestCommand extends Command
             "active"=> true,
             "emails" => [
                 [
-                    "value" =>  "gossow@nsfw.com",
+                    "value" =>  $email,
                     "display" =>  "string",
                     "type" =>  "work",
                     "primary" => true
                 ]
             ],
         ];
-        dd(json_encode($userSample));
         $response = Http::withoutVerifying()
             ->asJson()
-            ->withBasicAuth($this->gluuClientId, $this->gluuClientSecret)
+            ->withToken($registerToken)
             ->post(
                 $this->gluuBaseURL.self::CREATE_USER_URI,
                 $userSample
             );
 
-        dd($response);
+        if($response->status()==201){
+            $this->info("User Created: ".$username);
+            $this->info("User Password: ".$password);
+            return true;
+        }
         $this->error("Error, Cant create user");
+        $this->error($response->body());
         return false;
     }
 
     public function handle()
     {
+        $faker =Faker\Factory::create();
         $this->gluuClientId = env('GLUU_CLIENT_ID');
         $this->gluuClientSecret = env('GLUU_CLIENT_SECRECT');
         $this->gluuBaseURL = env('GLUU_HOST');
-        $username = "toanat1";
+        $username = $faker->userName;
         $password = "123456";
+        $email = $faker->email;
         $grantType = "password";
-        $this->register($username, $password);
-
+        $isCreateUser = $this->register($username, $email,$password);
+        if(!$isCreateUser) return;
         $this->warn("Authenticate user ".$username);
         $accessToken = $this->authenticate($username, $password, $grantType);
         if (!$accessToken) {
