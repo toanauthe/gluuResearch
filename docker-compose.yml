@@ -2,40 +2,182 @@ version: '3'
 services:
 
   #PHP Service
-  app-private:
+  app-patient:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: app-private
+      args:
+        - SERVICE_FOLDER=patient_service
+    container_name: app-patient
     restart: unless-stopped
     tty: true
     environment:
-      SERVICE_NAME: app-private
+      SERVICE_NAME: app-patient
       SERVICE_TAGS: dev
     working_dir: /var/www
     volumes:
-      - ./:/var/www
+      - ./patient_service:/var/www
       - ./docker-config/php/local.ini:/usr/local/etc/php/conf.d/local.ini
       - $HOME/.ssh:/home/www/.ssh
     networks:
       - default
-
   #MySQL Service
-  db:
+  db-patient:
     image: mysql:5.7.22
-    container_name: db-private
+    container_name: db-patient
     restart: unless-stopped
     tty: true
-    ports:
-      - "3306:3306"
     environment:
       MYSQL_DATABASE: laravel
       MYSQL_ROOT_PASSWORD: your_mysql_root_password
       SERVICE_TAGS: dev
       SERVICE_NAME: mysql
     volumes:
-      - dbdata:/var/lib/mysql/
+      - dbdata_patient:/var/lib/mysql/
       - ./docker-config/mysql/my.cnf:/etc/mysql/my.cnf
+    networks:
+      - default
+  #NGINX Service
+  nginx-patient:
+    image: nginx:alpine
+    container_name: nginx-patient
+    restart: unless-stopped
+    tty: true
+    volumes:
+      - ./patient_service:/var/www
+      - ./docker-config/nginx/conf.d/app-patient.conf:/etc/nginx/conf.d/app-patient.conf
+    networks:
+      - default
+  #PHP Service
+  app-auth:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - SERVICE_FOLDER=auth_service
+    container_name: app-auth
+    restart: unless-stopped
+    tty: true
+    environment:
+      SERVICE_NAME: app-auth
+      SERVICE_TAGS: dev
+    working_dir: /var/www
+    volumes:
+      - ./auth_service:/var/www
+      - ./docker-config/php/local.ini:/usr/local/etc/php/conf.d/local.ini
+      - $HOME/.ssh:/home/www/.ssh
+    networks:
+      - default
+  #MySQL Service
+  db-auth:
+    image: mysql:5.7.22
+    container_name: db-auth
+    restart: unless-stopped
+    tty: true
+    environment:
+      MYSQL_DATABASE: laravel
+      MYSQL_ROOT_PASSWORD: your_mysql_root_password
+      SERVICE_TAGS: dev
+      SERVICE_NAME: mysql
+    volumes:
+      - dbdata_auth:/var/lib/mysql/
+      - ./docker-config/mysql/my.cnf:/etc/mysql/my.cnf
+    networks:
+      - default
+  #NGINX Service
+  nginx-auth:
+    image: nginx:alpine
+    container_name: nginx-auth
+    restart: unless-stopped
+    tty: true
+    volumes:
+      - ./auth_service:/var/www
+      - ./docker-config/nginx/conf.d/app-auth.conf:/etc/nginx/conf.d/app-auth.conf
+    networks:
+      - default
+  #orchestration service
+  app-orchestration:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - SERVICE_FOLDER=orchestration_service
+    container_name: app-orchestration
+    restart: unless-stopped
+    tty: true
+    environment:
+      SERVICE_NAME: app-orchestration
+      SERVICE_TAGS: dev
+    working_dir: /var/www
+    volumes:
+      - ./orchestration_service:/var/www
+      - ./docker-config/php/local.ini:/usr/local/etc/php/conf.d/local.ini
+      - $HOME/.ssh:/home/www/.ssh
+    networks:
+      - default
+  #MySQL Service
+  db-orchestration:
+    image: mysql:5.7.22
+    container_name: db-orchestration
+    restart: unless-stopped
+    tty: true
+    environment:
+      MYSQL_DATABASE: laravel
+      MYSQL_ROOT_PASSWORD: your_mysql_root_password
+      SERVICE_TAGS: dev
+      SERVICE_NAME: mysql
+    volumes:
+      - dbdata_orchestration:/var/lib/mysql/
+      - ./docker-config/mysql/my.cnf:/etc/mysql/my.cnf
+    networks:
+      - default
+    #NGINX Service
+  nginx-orchestration:
+    image: nginx:alpine
+    container_name: nginx-orchestration
+    restart: unless-stopped
+    tty: true
+    volumes:
+      - ./orchestration_service:/var/www
+      - ./docker-config/nginx/conf.d/app-auth.conf:/etc/nginx/conf.d/app-orchestration.conf
+    networks:
+      - default
+  #KAFKA
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.0.1
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - default
+  broker:
+    image: confluentinc/cp-kafka:7.0.1
+    container_name: broker
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:9092,PLAINTEXT_INTERNAL://broker:29092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+    networks:
+      - default
+  redis:
+    image: "redis:alpine"
+
+    command: redis-server --requirepass sOmE_sEcUrE_pAsS
+
+    volumes:
+      - $PWD/redis-data:/var/lib/redis
+      - $PWD/redis.conf:/usr/local/etc/redis/redis.conf
+
+    environment:
+      - REDIS_REPLICATION_MODE=master
+
     networks:
       - default
 #Volumes
@@ -44,7 +186,10 @@ networks:
     name: gluu_default
     external: true
 volumes:
-  dbdata:
+  dbdata_patient:
     driver: local
-
+  dbdata_auth:
+    driver: local
+  dbdata_orchestration:
+    driver: local
 

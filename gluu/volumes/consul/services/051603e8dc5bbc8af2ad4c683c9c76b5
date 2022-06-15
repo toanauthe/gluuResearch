@@ -1,1 +1,0 @@
-{"Token":"","Service":{"ID":"ea6d3c48f91b:db-private:3306","Service":"mysql","Tags":["dev"],"Address":"172.24.0.3","Meta":null,"Port":3306,"Weights":{"Passing":1,"Warning":1},"EnableTagOverride":false,"Proxy":{"MeshGateway":{},"Expose":{}},"Connect":{},"CreateIndex":0,"ModifyIndex":0},"Source":"remote"}
