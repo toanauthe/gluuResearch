@@ -1,5 +1,5 @@
 <?php
-namespace App\Kafka;
+namespace App\Services\Kafka;
 
 use App\KafkaHandler\RegisterHandler;
 

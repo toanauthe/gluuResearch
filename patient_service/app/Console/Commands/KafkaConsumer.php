@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Kafka\KafkaHandler;
+use App\Services\Kafka\KafkaHandler;
 use Illuminate\Console\Command;
 use Junges\Kafka\Facades\Kafka;
 

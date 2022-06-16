@@ -42,7 +42,6 @@ class KafkaSendTestMessage extends Command
             key: $messageUUID
         );
         $producer = Kafka::publishOn('patient-register')
-            ->withKafkaKey('kafka-key')
             ->withMessage($message);
         $producer->send();
         $this->info('uuid '.$messageUUID);

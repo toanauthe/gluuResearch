@@ -3,18 +3,13 @@
 namespace App\KafkaHandler;
 
 use App\Models\PatientUser;
+use App\Services\Gluu\GluuService;
 use Illuminate\Support\Facades\Redis;
 use Junges\Kafka\Contracts\KafkaConsumerMessage;
 
-class RegisterHandler
+class RegisterHandler extends BaseHandler
 {
-    public array $payload;
-    public string $uuid;
 
-    public function __construct($uuid, array $payload){
-        $this->payload = $payload;
-        $this->uuid = $uuid;
-    }
     public function handle()
     {
         $patient = new PatientUser();
@@ -25,18 +20,22 @@ class RegisterHandler
         $patient->last_name = $this->payload['last_name'];
         $patient->phone_number = $this->payload['phone_number'];
         Redis::set($this->uuid,serialize($patient));
-        echo $this->uuid;
     }
 
     public function rollback()
     {
+        Redis::del($this->uuid);
     }
 
     public function commit()
     {
         $patient = unserialize(Redis::get($this->uuid));
-        $patient->save();
-        Redis::del($this->uuid);
-        echo 'haha';
+        $gluuService = new GluuService();
+        $result = $gluuService->register(username: $patient->username,email: $patient->email,password: $patient->password);
+        if($result)
+        {
+            $patient->save();
+            Redis::del($this->uuid);
+        }
     }
 }

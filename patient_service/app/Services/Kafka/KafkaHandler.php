@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Kafka;
+namespace App\Services\Kafka;
 
 use Junges\Kafka\Contracts\KafkaConsumerMessage;
 
@@ -12,9 +12,9 @@ class KafkaHandler
         $event = $headers['event'];
         $status = $headers['status'];
         try {
-            $handler = new KafkaEvent::$kafkaEventHandler[$event]($message->getKey(),$message->getBody());
+            $handler = new KafkaEvent::$kafkaEventHandler[$event](topic:$message->getTopicName(),event:$event,uuid: $message->getKey(),payload: $message->getBody());
             if ($status == 'PROCESSING') {
-                $handler->handle();
+                $handler();
             } elseif ($status == 'ROLLBACK') {
                 $handler->rollback();
             } elseif ($status == 'FINISHED') {
